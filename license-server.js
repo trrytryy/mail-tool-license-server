@@ -1,7 +1,8 @@
 const express = require('express');
 const { activateMachine, isMachineActivated, listActivatedMachines, deactivateMachine } = require('./license-store');
+const botConfig = require('./telegram-config.json');
 
-const ADMIN_TOKEN = process.env.LICENSE_SERVER_ADMIN_TOKEN || null;
+const ADMIN_TOKEN = process.env.LICENSE_SERVER_ADMIN_TOKEN || botConfig.adminToken || null;
 
 const app = express();
 app.use(express.json());

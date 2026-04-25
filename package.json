@@ -10,7 +10,8 @@
     "dist": "electron-builder --publish=never",
     "gen-key": "node -e \"const license = require('./license'); console.log(license.generateValidKey())\"",
     "license-server": "node license-server.js",
-    "telegram-bot": "node telegram-bot.js"
+    "telegram-bot": "node telegram-bot.js",
+    "run-all": "cmd /c \"start \"License Server\" cmd /k \"node license-server.js\" && timeout /t 1 >nul && start \"Telegram Bot\" cmd /k \"node telegram-bot.js\"\""
   },
   "keywords": ["email", "bulk", "smtp", "electron"],
   "author": "Your Name",

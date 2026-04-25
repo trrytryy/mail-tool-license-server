@@ -10,5 +10,5 @@ Mail Pro Tool activation instructions for customers:
 Important:
 - Use this latest version of the tool only.
 - Delete the old version before installing the new one.
-- The app connects to: https://mail-tool-license-server-tau.vercel.app
+- The app connects to: https://steady-torrone-e91184.netlify.app
 - If you see "Chưa kích hoạt", send Machine ID to admin for activation.

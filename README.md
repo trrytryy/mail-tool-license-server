@@ -178,23 +178,33 @@ All sending activities are logged in real-time and saved to `~/.mail-pro-tool/lo
 This application requires a valid license key for activation. Contact the developer for licensing information.
 
 ### Remote license activation with Telegram
-You can run a simple license backend and manage keys through Telegram to support commercial distribution.
+You can run a simple license backend and manage license activation through Telegram.
 
 1. Start the license server:
 ```bash
 npm run license-server
 ```
-2. Run the Telegram bot with your bot token and admin chat ID:
+2. Run the Telegram bot from the project root:
 ```bash
-set TELEGRAM_BOT_TOKEN=your_bot_token
-set TELEGRAM_ADMIN_CHAT_ID=your_chat_id
 npm run telegram-bot
 ```
-3. Use the bot to create a license key:
-  - `/genkey [machineId]` - Tạo key mới, có thể bind máy
-  - `/info <key>` - Kiểm tra trạng thái key
-  - `/revoke <key>` - Thu hồi key
-  - `/list` - Danh sách license
+3. Or run both server and bot together on Windows:
+```bash
+npm run run-all
+```
+Or double-click `run-all.cmd`.
+4. Use the bot to manage activation:
+  - `/start` - Hiển thị menu xử lý
+  - `/activate <machineId>` - Kích hoạt máy bằng Machine ID
+  - `/deactivate <machineId>` - Hủy kích hoạt máy
+  - `/list` - Danh sách máy đã kích hoạt
+  - `/menu` - Hiển thị lại menu nút nhanh
+
+If you send old commands like `/genkey`, `/info`, or `/revoke`, the bot will tell you to use the new Machine ID flow.
+
+> Note: For Netlify / serverless deployment, the license store may need a writable path.
+> If `/var/task` is read-only, the app now uses `/tmp/license-data.json` automatically.
+> You can also set `LICENSE_DATA_PATH` to a writable location.
 
 ### App activation flow
 The Electron client now supports remote activation by calling the license server configured in `license-config.json`.

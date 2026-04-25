@@ -1,8 +1,25 @@
 const fs = require('fs').promises;
+const fsSync = require('fs');
+const os = require('os');
 const path = require('path');
 const fetch = require('node-fetch');
 
-const STORE_FILE = path.join(process.cwd(), 'license-data.json');
+function getDefaultStorePath() {
+  const envPath = process.env.LICENSE_DATA_PATH;
+  if (envPath) {
+    return envPath;
+  }
+
+  const cwdStore = path.join(process.cwd(), 'license-data.json');
+  try {
+    fsSync.accessSync(process.cwd(), fsSync.constants.W_OK);
+    return cwdStore;
+  } catch {
+    return path.join(os.tmpdir(), 'license-data.json');
+  }
+}
+
+const STORE_FILE = getDefaultStorePath();
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || null;
 const GITHUB_REPO = process.env.GITHUB_REPO || 'trrytryy/mail-tool-license-server';
 const GITHUB_FILE = process.env.GITHUB_FILE || 'license-data.json';
