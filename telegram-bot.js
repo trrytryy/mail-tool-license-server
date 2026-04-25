@@ -1,8 +1,9 @@
 const TelegramBot = require('node-telegram-bot-api');
-const { createLicense, getLicense, revokeLicense, listLicenses } = require('./license-store');
+const fetch = require('node-fetch');
+const config = require('./telegram-config.json');
 
-const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const ADMIN_CHAT_ID = String(process.env.TELEGRAM_ADMIN_CHAT_ID || '');
+const TOKEN = config.telegramBotToken;
+const ADMIN_CHAT_ID = config.adminChatId;
 
 if (!TOKEN || !ADMIN_CHAT_ID) {
   console.error('Missing TELEGRAM_BOT_TOKEN or TELEGRAM_ADMIN_CHAT_ID environment variables.');
@@ -41,9 +42,26 @@ bot.onText(/\/genkey(?:\s+(.+))?/, async (msg, match) => {
   }
 
   const machineId = match[1] ? match[1].trim() : null;
-  const license = await createLicense({ machineId, notes: machineId ? 'Bound machine' : 'Unbound license' });
-  const message = `License created:\nKey: ${license.key}\nMachine bound: ${license.machineId ? 'Yes' : 'No'}\nActivatedAt: ${license.activatedAt}`;
-  bot.sendMessage(msg.chat.id, message);
+  try {
+    const response = await fetch(`${config.licenseServerUrl}/api/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-token': config.adminToken
+      },
+      body: JSON.stringify({ machineId, notes: machineId ? 'Bound machine' : 'Unbound license' })
+    });
+    const data = await response.json();
+    if (data.success) {
+      const license = data.license;
+      const message = `License created:\nKey: ${license.key}\nMachine bound: ${license.machineId ? 'Yes' : 'No'}\nActivatedAt: ${license.activatedAt}`;
+      bot.sendMessage(msg.chat.id, message);
+    } else {
+      bot.sendMessage(msg.chat.id, `Error: ${data.message}`);
+    }
+  } catch (error) {
+    bot.sendMessage(msg.chat.id, `Error creating license: ${error.message}`);
+  }
 });
 
 bot.onText(/\/info\s+(.+)/, async (msg, match) => {
@@ -52,13 +70,26 @@ bot.onText(/\/info\s+(.+)/, async (msg, match) => {
   }
 
   const key = match[1].trim();
-  const license = await getLicense(key);
-  if (!license) {
-    return bot.sendMessage(msg.chat.id, 'License không tồn tại.');
+  try {
+    const response = await fetch(`${config.licenseServerUrl}/api/get`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-token': config.adminToken
+      },
+      body: JSON.stringify({ key })
+    });
+    const data = await response.json();
+    if (data.success) {
+      const license = data.license;
+      const status = `Key: ${license.key}\nActive: ${license.active}\nRevoked: ${license.revoked}\nMachineId: ${license.machineId || 'None'}\nOwner: ${license.owner || 'None'}\nNotes: ${license.notes || 'None'}\nCreatedAt: ${license.createdAt}\nActivatedAt: ${license.activatedAt}`;
+      bot.sendMessage(msg.chat.id, status);
+    } else {
+      bot.sendMessage(msg.chat.id, `Error: ${data.message}`);
+    }
+  } catch (error) {
+    bot.sendMessage(msg.chat.id, `Error getting license: ${error.message}`);
   }
-
-  const status = `Key: ${license.key}\nActive: ${license.active}\nRevoked: ${license.revoked}\nMachineId: ${license.machineId || 'None'}\nOwner: ${license.owner || 'None'}\nNotes: ${license.notes || 'None'}\nCreatedAt: ${license.createdAt}\nActivatedAt: ${license.activatedAt}`;
-  bot.sendMessage(msg.chat.id, status);
 });
 
 bot.onText(/\/revoke\s+(.+)/, async (msg, match) => {
@@ -67,8 +98,20 @@ bot.onText(/\/revoke\s+(.+)/, async (msg, match) => {
   }
 
   const key = match[1].trim();
-  const result = await revokeLicense(key);
-  bot.sendMessage(msg.chat.id, result.message);
+  try {
+    const response = await fetch(`${config.licenseServerUrl}/api/revoke`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-token': config.adminToken
+      },
+      body: JSON.stringify({ key })
+    });
+    const data = await response.json();
+    bot.sendMessage(msg.chat.id, data.message);
+  } catch (error) {
+    bot.sendMessage(msg.chat.id, `Error revoking license: ${error.message}`);
+  }
 });
 
 bot.onText(/\/list/, async (msg) => {
@@ -76,16 +119,31 @@ bot.onText(/\/list/, async (msg) => {
     return bot.sendMessage(msg.chat.id, 'Bạn không có quyền thực hiện lệnh này.');
   }
 
-  const licenses = await listLicenses();
-  if (licenses.length === 0) {
-    return bot.sendMessage(msg.chat.id, 'Chưa có license nào được tạo.');
+  try {
+    const response = await fetch(`${config.licenseServerUrl}/api/list`, {
+      method: 'GET',
+      headers: {
+        'x-admin-token': config.adminToken
+      }
+    });
+    const data = await response.json();
+    if (data.success) {
+      const licenses = data.licenses;
+      if (licenses.length === 0) {
+        return bot.sendMessage(msg.chat.id, 'Chưa có license nào được tạo.');
+      }
+
+      const lines = licenses.slice(-20).map(license => {
+        return `• ${license.key} | active=${license.active} | revoked=${license.revoked} | bound=${license.machineId ? 'yes' : 'no'}`;
+      });
+
+      bot.sendMessage(msg.chat.id, `License list (max 20):\n${lines.join('\n')}`);
+    } else {
+      bot.sendMessage(msg.chat.id, `Error: ${data.message}`);
+    }
+  } catch (error) {
+    bot.sendMessage(msg.chat.id, `Error listing licenses: ${error.message}`);
   }
-
-  const lines = licenses.slice(-20).map(license => {
-    return `• ${license.key} | active=${license.active} | revoked=${license.revoked} | bound=${license.machineId ? 'yes' : 'no'}`;
-  });
-
-  bot.sendMessage(msg.chat.id, `License list (max 20):\n${lines.join('\n')}`);
 });
 
 bot.on('polling_error', (error) => {

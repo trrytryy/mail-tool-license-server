@@ -25,6 +25,33 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+app.post('/api/create', requireAdminToken, async (req, res) => {
+  const { machineId, notes, owner } = req.body;
+  try {
+    const license = await createLicense({ machineId, notes, owner });
+    res.json({ success: true, license });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/get', requireAdminToken, async (req, res) => {
+  const { key } = req.body;
+  if (!key) {
+    return res.status(400).json({ success: false, message: 'Key is required' });
+  }
+
+  try {
+    const license = await getLicense(key);
+    if (!license) {
+      return res.status(404).json({ success: false, message: 'License not found' });
+    }
+    res.json({ success: true, license });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 app.post('/api/activate', async (req, res) => {
   const { key, machineId } = req.body;
   if (!key || !machineId) {
