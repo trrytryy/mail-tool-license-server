@@ -1,5 +1,5 @@
 {
   "useRemoteLicense": true,
-  "licenseServerUrl": "https://mail-tool-license-server-tau.vercel.app",
+  "licenseServerUrl": "https://your-netlify-app.netlify.app",
   "verifyOnStartup": true
 }
