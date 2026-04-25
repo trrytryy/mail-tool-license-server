@@ -1,0 +1,14 @@
+# Node modules
+node_modules/
+
+# Build output
+dist/
+win-unpacked/
+
+# License data and env
+license-data.json
+.env
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.ckeditor.com/4.22.1/full/ckeditor.js"></script>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background: #fff;
+        }
+        #editor {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <textarea id="editor"></textarea>
+
+    <script>
+        (function () {
+            var pendingHtml = "";
+
+            function init() {
+                if (!window.CKEDITOR) return;
+                if (CKEDITOR.instances && CKEDITOR.instances.editor) return;
+
+                var instance = CKEDITOR.replace('editor', {
+                    height: 400,
+                    allowedContent: true,
+                    extraAllowedContent: 'iframe[*]'
+                });
+
+                instance.on('instanceReady', function () {
+                    if (pendingHtml) {
+                        try { instance.setData(pendingHtml); } catch (e) { }
+                        pendingHtml = "";
+                    }
+                });
+            }
+
+            window.getData = function () {
+                try {
+                    if (window.CKEDITOR && CKEDITOR.instances && CKEDITOR.instances.editor) {
+                        var inst = CKEDITOR.instances.editor;
+                        try { inst.updateElement(); } catch (e) { }
+                        return inst.getData();
+                    }
+                } catch (e) { }
+                return pendingHtml || "";
+            };
+
+            window.setData = function (html) {
+                pendingHtml = (html == null) ? "" : String(html);
+                try {
+                    if (window.CKEDITOR && CKEDITOR.instances && CKEDITOR.instances.editor) {
+                        CKEDITOR.instances.editor.setData(pendingHtml);
+                        pendingHtml = "";
+                        return;
+                    }
+                } catch (e) { }
+            };
+
+            init();
+            setTimeout(init, 50);
+            setTimeout(init, 250);
+            setTimeout(init, 1000);
+        })();
+    </script>
+</body>
+</html>

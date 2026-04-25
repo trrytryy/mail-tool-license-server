@@ -1,0 +1,6 @@
+{
+  "telegramBotToken": "YOUR_TELEGRAM_BOT_TOKEN",
+  "adminChatId": "YOUR_TELEGRAM_CHAT_ID",
+  "licenseServerUrl": "http://localhost:3000",
+  "adminToken": "YOUR_ADMIN_TOKEN"
+}

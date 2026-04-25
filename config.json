@@ -1,0 +1,63 @@
+{
+  "example_smtp_accounts": [
+    {
+      "email": "your-email@gmail.com",
+      "password": "your-app-password",
+      "host": "smtp.gmail.com",
+      "port": 587
+    },
+    {
+      "email": "your-email@outlook.com",
+      "password": "your-password",
+      "host": "smtp-mail.outlook.com",
+      "port": 587
+    }
+  ],
+  "example_csv_recipients": "John Doe,john@example.com\nJane Smith,jane@example.com\nBob Johnson,bob@example.com",
+  "example_txt_recipients": "john@example.com\njane@example.com\nbob@example.com",
+  "example_html_content": "<h1>Hello {{name}}!</h1><p>This is a test email sent from Mail Pro Tool.</p><p>Your email: {{email}}</p><p>Best regards,<br>Mail Pro Team</p>",
+  "example_text_content": "Hello {{name}}!\n\nThis is a test email sent from Mail Pro Tool.\nYour email: {{email}}\n\nBest regards,\nMail Pro Team",
+  "sending_options": {
+    "delay_seconds": 2,
+    "rate_limit_emails_per_minute": 30,
+    "max_emails_per_session": 100
+  },
+  "queue_features": {
+    "non_blocking_processing": true,
+    "pause_resume_support": true,
+    "retry_on_failure": true,
+    "max_retries": 2,
+    "smtp_cooldown_minutes": 5
+  },
+  "campaign_example": {
+    "name": "Welcome Email Campaign",
+    "subject": "Welcome to our service!",
+    "htmlContent": "<h1>Welcome {{name}}!</h1><p>Thank you for joining us.</p>",
+    "textContent": "Welcome {{name}}!\n\nThank you for joining us.",
+    "recipients": "John Doe,john@example.com\nJane Smith,jane@example.com"
+  },
+  "note": "This is an example configuration file. Actual data is stored securely in the user's home directory."
+}{
+  "example_smtp_accounts": [
+    {
+      "email": "your-email@gmail.com",
+      "password": "your-app-password",
+      "host": "smtp.gmail.com",
+      "port": 587
+    },
+    {
+      "email": "your-email@outlook.com",
+      "password": "your-password",
+      "host": "smtp-mail.outlook.com",
+      "port": 587
+    }
+  ],
+  "example_csv_recipients": "John Doe,john@example.com\nJane Smith,jane@example.com\nBob Johnson,bob@example.com",
+  "example_email_content": "<h1>Hello {{name}}!</h1><p>This is a test email sent from Mail Pro Tool.</p><p>Best regards,<br>Mail Pro Team</p>",
+  "sending_options": {
+    "delay_seconds": 2,
+    "rate_limit_emails_per_minute": 30,
+    "max_emails_per_session": 100
+  },
+  "note": "This is an example configuration file. Actual data is stored securely in the user's home directory."
+}

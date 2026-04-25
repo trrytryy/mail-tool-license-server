@@ -1,0 +1,5 @@
+{
+  "useRemoteLicense": true,
+  "licenseServerUrl": "https://mail-tool-license-server.vercel.app",
+  "verifyOnStartup": true
+}
