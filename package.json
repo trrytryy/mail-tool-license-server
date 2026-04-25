@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "start-server": "node license-server.js",
     "build": "electron-builder",
     "dist": "electron-builder --publish=never",
     "gen-key": "node -e \"const license = require('./license'); console.log(license.generateValidKey())\"",
