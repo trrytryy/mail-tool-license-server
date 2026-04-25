@@ -54,10 +54,18 @@ class LicenseManager {
   async isActivated() {
     try {
       const license = await storage.read('license');
-      if (license && license.activated === true) {
-        if (config.useRemoteLicense && config.verifyOnStartup) {
-          return (await remoteValidate()).valid;
+      if (config.useRemoteLicense) {
+        const remoteResult = await remoteValidate();
+        if (remoteResult.valid) {
+          return true;
         }
+        if (license && license.activated === true && !config.verifyOnStartup) {
+          return true;
+        }
+        return false;
+      }
+
+      if (license && license.activated === true) {
         return true;
       }
       return false;
