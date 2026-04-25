@@ -1,55 +1,64 @@
-const mongoose = require('mongoose');
+const fs = require('fs').promises;
+const os = require('os');
+const path = require('path');
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/mail-tool';
+const STORE_FILE = path.join(process.cwd(), 'license-data.json');
 
-// Connect to MongoDB
-async function connectDB() {
-  if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(MONGODB_URI);
+async function ensureStore() {
+  try {
+    await fs.access(STORE_FILE);
+  } catch {
+    await writeStore({ activatedMachines: [] });
   }
 }
 
-// Activated Machine Schema
-const activatedMachineSchema = new mongoose.Schema({
-  machineId: { type: String, required: true, unique: true },
-  activatedAt: { type: Date, default: Date.now },
-  notes: String
-});
+async function readStore() {
+  await ensureStore();
+  const content = await fs.readFile(STORE_FILE, 'utf8');
+  return JSON.parse(content || '{"activatedMachines":[]}');
+}
 
-const ActivatedMachine = mongoose.model('ActivatedMachine', activatedMachineSchema);
+async function writeStore(data) {
+  await fs.writeFile(STORE_FILE, JSON.stringify(data, null, 2), 'utf8');
+}
 
 async function activateMachine(machineId, notes = '') {
-  await connectDB();
-  try {
-    const activated = new ActivatedMachine({
-      machineId,
-      notes
-    });
-    await activated.save();
-    return { success: true, activated: activated.toObject() };
-  } catch (error) {
-    if (error.code === 11000) { // Duplicate key
-      return { success: false, message: 'Machine already activated' };
-    }
-    throw error;
+  const store = await readStore();
+  const existing = store.activatedMachines.find(m => m.machineId === machineId);
+  if (existing) {
+    return { success: false, message: 'Machine already activated' };
   }
+
+  const activated = {
+    machineId,
+    activatedAt: new Date().toISOString(),
+    notes
+  };
+  store.activatedMachines.push(activated);
+  await writeStore(store);
+  return { success: true, activated };
 }
 
 async function isMachineActivated(machineId) {
-  await connectDB();
-  const activated = await ActivatedMachine.findOne({ machineId });
-  return !!activated;
+  const store = await readStore();
+  return store.activatedMachines.some(m => m.machineId === machineId);
 }
 
 async function listActivatedMachines() {
-  await connectDB();
-  return await ActivatedMachine.find({}).sort({ activatedAt: -1 }).lean();
+  const store = await readStore();
+  return store.activatedMachines;
 }
 
 async function deactivateMachine(machineId) {
-  await connectDB();
-  const result = await ActivatedMachine.deleteOne({ machineId });
-  return { success: result.deletedCount > 0, message: result.deletedCount > 0 ? 'Machine deactivated' : 'Machine not found' };
+  const store = await readStore();
+  const index = store.activatedMachines.findIndex(m => m.machineId === machineId);
+  if (index === -1) {
+    return { success: false, message: 'Machine not found' };
+  }
+
+  store.activatedMachines.splice(index, 1);
+  await writeStore(store);
+  return { success: true, message: 'Machine deactivated' };
 }
 
 module.exports = {
