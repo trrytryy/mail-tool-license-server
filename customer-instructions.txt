@@ -1,0 +1,14 @@
+Mail Pro Tool activation instructions for customers:
+
+1. Download and install the latest Mail Pro Tool setup.
+2. Open the app and go to the license activation screen.
+3. Copy the displayed Machine ID and send it back to the seller.
+4. Seller creates a license key and sends it to the customer.
+5. Paste the license key into the app and click Activate.
+6. The app will validate the key against the remote server at:
+   https://mail-tool-license-server-tau.vercel.app
+
+Important:
+- Use this latest version of the tool only.
+- Delete the old version before installing the new one.
+- If activation fails, please send the Machine ID and key to support.
