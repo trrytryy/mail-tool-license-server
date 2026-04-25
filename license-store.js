@@ -1,28 +1,30 @@
-const fs = require('fs').promises;
-const os = require('os');
-const path = require('path');
+const mongoose = require('mongoose');
 const crypto = require('crypto');
 
-const STORE_FILE = process.env.LICENSE_STORE_FILE || path.join(os.tmpdir(), 'mail-tool-license-data.json');
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/mail-tool'; // User needs to set this
+
 const SECRET = 'mail-pro-tool-secret-key-2024';
 
-async function ensureStore() {
-  try {
-    await fs.access(STORE_FILE);
-  } catch {
-    await writeStore({ licenses: [] });
+// Connect to MongoDB
+async function connectDB() {
+  if (mongoose.connection.readyState === 0) {
+    await mongoose.connect(MONGODB_URI);
   }
 }
 
-async function readStore() {
-  await ensureStore();
-  const content = await fs.readFile(STORE_FILE, 'utf8');
-  return JSON.parse(content || '{"licenses":[]}');
-}
+// License Schema
+const licenseSchema = new mongoose.Schema({
+  key: { type: String, required: true, unique: true },
+  machineId: String,
+  active: { type: Boolean, default: false },
+  revoked: { type: Boolean, default: false },
+  owner: String,
+  notes: String,
+  createdAt: { type: Date, default: Date.now },
+  activatedAt: Date
+});
 
-async function writeStore(data) {
-  await fs.writeFile(STORE_FILE, JSON.stringify(data, null, 2), 'utf8');
-}
+const License = mongoose.model('License', licenseSchema);
 
 function normalizeKey(key) {
   return String(key || '').trim().toUpperCase();
@@ -47,33 +49,30 @@ function generateLicenseKey() {
 }
 
 async function getLicense(key) {
+  await connectDB();
   const normalized = normalizeKey(key);
-  const store = await readStore();
-  return store.licenses.find(item => normalizeKey(item.key) === normalized) || null;
+  return await License.findOne({ key: normalized }).lean();
 }
 
 async function createLicense({ machineId = null, owner = null, notes = null } = {}) {
+  await connectDB();
   const key = generateLicenseKey();
-  const license = {
+  const license = new License({
     key,
     active: true,
-    owner: owner || null,
-    notes: notes || null,
-    machineId: machineId || null,
-    createdAt: new Date().toISOString(),
-    activatedAt: new Date().toISOString(),
-    revoked: false
-  };
-  const store = await readStore();
-  store.licenses.push(license);
-  await writeStore(store);
-  return license;
+    owner,
+    notes,
+    machineId,
+    activatedAt: new Date()
+  });
+  await license.save();
+  return license.toObject();
 }
 
 async function activateLicense(key, machineId) {
-  const store = await readStore();
+  await connectDB();
   const normalized = normalizeKey(key);
-  let license = store.licenses.find(item => normalizeKey(item.key) === normalized);
+  const license = await License.findOne({ key: normalized });
 
   if (!license) {
     return { valid: false, message: 'License key not found' };
@@ -90,15 +89,15 @@ async function activateLicense(key, machineId) {
   license.machineId = machineId;
   license.active = true;
   license.revoked = false;
-  license.activatedAt = new Date().toISOString();
-  await writeStore(store);
-  return { valid: true, message: 'License activated', license };
+  license.activatedAt = new Date();
+  await license.save();
+  return { valid: true, message: 'License activated', license: license.toObject() };
 }
 
 async function revokeLicense(key) {
-  const store = await readStore();
+  await connectDB();
   const normalized = normalizeKey(key);
-  const license = store.licenses.find(item => normalizeKey(item.key) === normalized);
+  const license = await License.findOne({ key: normalized });
 
   if (!license) {
     return { success: false, message: 'License key not found' };
@@ -106,13 +105,13 @@ async function revokeLicense(key) {
 
   license.revoked = true;
   license.active = false;
-  await writeStore(store);
-  return { success: true, message: 'License revoked', license };
+  await license.save();
+  return { success: true, message: 'License revoked', license: license.toObject() };
 }
 
 async function listLicenses() {
-  const store = await readStore();
-  return store.licenses;
+  await connectDB();
+  return await License.find({}).sort({ createdAt: -1 }).lean();
 }
 
 module.exports = {
