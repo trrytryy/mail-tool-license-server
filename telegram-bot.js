@@ -21,10 +21,9 @@ bot.onText(/\/start/, (msg) => {
     return bot.sendMessage(msg.chat.id, 'Xin chào! Bạn không có quyền sử dụng bot này.');
   }
   const help = `Admin Telegram License Bot\n\n` +
-    `/genkey [machineId] - Tạo license mới. Nếu có machineId thì bind máy.\n` +
-    `/info <key> - Xem trạng thái license.\n` +
-    `/revoke <key> - Thu hồi license.\n` +
-    `/list - Danh sách license.\n` +
+    `/activate <machineId> - Kích hoạt máy với Machine ID\n` +
+    `/deactivate <machineId> - Hủy kích hoạt máy\n` +
+    `/list - Danh sách máy đã kích hoạt\n` +
     `/help - Hiển thị lệnh.`;
   bot.sendMessage(msg.chat.id, help);
 });
@@ -33,84 +32,54 @@ bot.onText(/\/help/, (msg) => {
   if (!isAdmin(msg.chat.id)) {
     return bot.sendMessage(msg.chat.id, 'Bạn không có quyền truy cập.');
   }
-  bot.sendMessage(msg.chat.id, 'Dùng /genkey, /info, /revoke, /list để quản lý license.');
+  bot.sendMessage(msg.chat.id, 'Dùng /activate, /deactivate, /list để quản lý license.');
 });
 
-bot.onText(/\/genkey(?:\s+(.+))?/, async (msg, match) => {
+bot.onText(/\/activate\s+(.+)/, async (msg, match) => {
   if (!isAdmin(msg.chat.id)) {
     return bot.sendMessage(msg.chat.id, 'Bạn không có quyền thực hiện lệnh này.');
   }
 
-  const machineId = match[1] ? match[1].trim() : null;
+  const machineId = match[1].trim();
   try {
-    const response = await fetch(`${config.licenseServerUrl}/api/create`, {
+    const response = await fetch(`${config.licenseServerUrl}/api/activate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-admin-token': config.adminToken
       },
-      body: JSON.stringify({ machineId, notes: machineId ? 'Bound machine' : 'Unbound license' })
+      body: JSON.stringify({ machineId, notes: `Activated by admin ${msg.from.username}` })
     });
     const data = await response.json();
     if (data.success) {
-      const license = data.license;
-      const message = `License created:\nKey: ${license.key}\nMachine bound: ${license.machineId ? 'Yes' : 'No'}\nActivatedAt: ${license.activatedAt}`;
-      bot.sendMessage(msg.chat.id, message);
+      bot.sendMessage(msg.chat.id, `✅ Máy ${machineId} đã được kích hoạt thành công!`);
     } else {
-      bot.sendMessage(msg.chat.id, `Error: ${data.message}`);
+      bot.sendMessage(msg.chat.id, `❌ Lỗi: ${data.message}`);
     }
   } catch (error) {
-    bot.sendMessage(msg.chat.id, `Error creating license: ${error.message}`);
+    bot.sendMessage(msg.chat.id, `❌ Lỗi kết nối: ${error.message}`);
   }
 });
 
-bot.onText(/\/info\s+(.+)/, async (msg, match) => {
+bot.onText(/\/deactivate\s+(.+)/, async (msg, match) => {
   if (!isAdmin(msg.chat.id)) {
     return bot.sendMessage(msg.chat.id, 'Bạn không có quyền thực hiện lệnh này.');
   }
 
-  const key = match[1].trim();
+  const machineId = match[1].trim();
   try {
-    const response = await fetch(`${config.licenseServerUrl}/api/get`, {
+    const response = await fetch(`${config.licenseServerUrl}/api/deactivate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-admin-token': config.adminToken
       },
-      body: JSON.stringify({ key })
+      body: JSON.stringify({ machineId })
     });
     const data = await response.json();
-    if (data.success) {
-      const license = data.license;
-      const status = `Key: ${license.key}\nActive: ${license.active}\nRevoked: ${license.revoked}\nMachineId: ${license.machineId || 'None'}\nOwner: ${license.owner || 'None'}\nNotes: ${license.notes || 'None'}\nCreatedAt: ${license.createdAt}\nActivatedAt: ${license.activatedAt}`;
-      bot.sendMessage(msg.chat.id, status);
-    } else {
-      bot.sendMessage(msg.chat.id, `Error: ${data.message}`);
-    }
+    bot.sendMessage(msg.chat.id, data.success ? `✅ Máy ${machineId} đã được hủy kích hoạt!` : `❌ ${data.message}`);
   } catch (error) {
-    bot.sendMessage(msg.chat.id, `Error getting license: ${error.message}`);
-  }
-});
-
-bot.onText(/\/revoke\s+(.+)/, async (msg, match) => {
-  if (!isAdmin(msg.chat.id)) {
-    return bot.sendMessage(msg.chat.id, 'Bạn không có quyền thực hiện lệnh này.');
-  }
-
-  const key = match[1].trim();
-  try {
-    const response = await fetch(`${config.licenseServerUrl}/api/revoke`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-admin-token': config.adminToken
-      },
-      body: JSON.stringify({ key })
-    });
-    const data = await response.json();
-    bot.sendMessage(msg.chat.id, data.message);
-  } catch (error) {
-    bot.sendMessage(msg.chat.id, `Error revoking license: ${error.message}`);
+    bot.sendMessage(msg.chat.id, `❌ Lỗi kết nối: ${error.message}`);
   }
 });
 
@@ -128,21 +97,21 @@ bot.onText(/\/list/, async (msg) => {
     });
     const data = await response.json();
     if (data.success) {
-      const licenses = data.licenses;
-      if (licenses.length === 0) {
-        return bot.sendMessage(msg.chat.id, 'Chưa có license nào được tạo.');
+      const machines = data.machines;
+      if (machines.length === 0) {
+        return bot.sendMessage(msg.chat.id, 'Chưa có máy nào được kích hoạt.');
       }
 
-      const lines = licenses.slice(-20).map(license => {
-        return `• ${license.key} | active=${license.active} | revoked=${license.revoked} | bound=${license.machineId ? 'yes' : 'no'}`;
+      const lines = machines.slice(-20).map(machine => {
+        return `• ${machine.machineId} | ${new Date(machine.activatedAt).toLocaleString()}`;
       });
 
-      bot.sendMessage(msg.chat.id, `License list (max 20):\n${lines.join('\n')}`);
+      bot.sendMessage(msg.chat.id, `Máy đã kích hoạt (max 20):\n${lines.join('\n')}`);
     } else {
-      bot.sendMessage(msg.chat.id, `Error: ${data.message}`);
+      bot.sendMessage(msg.chat.id, `❌ Lỗi: ${data.message}`);
     }
   } catch (error) {
-    bot.sendMessage(msg.chat.id, `Error listing licenses: ${error.message}`);
+    bot.sendMessage(msg.chat.id, `❌ Lỗi kết nối: ${error.message}`);
   }
 });
 

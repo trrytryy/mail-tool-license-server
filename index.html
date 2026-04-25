@@ -470,15 +470,18 @@
     </style>
 </head>
 <body>
-    <!-- License Activation Modal -->
+    <!-- License Status Modal -->
     <div id="license-modal" class="license-overlay">
         <div class="license-modal">
-            <h2>Enter License Key</h2>
-            <p>Please enter your license key to activate Mail Pro Tool</p>
-            <input type="text" id="license-key" placeholder="XXXX-XXXX-XXXX" maxlength="14">
-            <p id="license-machine-id" style="color: #aaaaaa; margin-top: 12px; font-size: 0.9em;">Machine ID: loading...</p>
-            <button class="btn" onclick="activateLicense()">Activate</button>
-            <p id="license-error" style="color: #e74c3c; margin-top: 15px;"></p>
+            <h2>License Status</h2>
+            <p>Trạng thái license của bạn:</p>
+            <div id="license-machine-id" style="margin: 15px 0; padding: 10px; background: #f5f5f5; border-radius: 5px; font-family: monospace;">
+                Machine ID: loading...
+            </div>
+            <p style="font-size: 0.9em; color: #666;">
+                Nếu chưa kích hoạt, hãy copy Machine ID và gửi cho admin để được kích hoạt.
+            </p>
+            <button class="btn" onclick="document.getElementById('license-modal').classList.add('hidden')">Đóng</button>
         </div>
     </div>
 

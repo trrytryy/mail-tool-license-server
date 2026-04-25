@@ -1,5 +1,5 @@
 const express = require('express');
-const { activateLicense, getLicense, revokeLicense, listLicenses } = require('./license-store');
+const { activateMachine, isMachineActivated, listActivatedMachines, deactivateMachine } = require('./license-store');
 
 const ADMIN_TOKEN = process.env.LICENSE_SERVER_ADMIN_TOKEN || null;
 
@@ -25,89 +25,52 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-app.post('/api/create', requireAdminToken, async (req, res) => {
-  const { machineId, notes, owner } = req.body;
-  try {
-    const license = await createLicense({ machineId, notes, owner });
-    res.json({ success: true, license });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-app.post('/api/get', requireAdminToken, async (req, res) => {
-  const { key } = req.body;
-  if (!key) {
-    return res.status(400).json({ success: false, message: 'Key is required' });
+app.post('/api/activate', requireAdminToken, async (req, res) => {
+  const { machineId, notes } = req.body;
+  if (!machineId) {
+    return res.status(400).json({ success: false, message: 'Machine ID is required' });
   }
 
   try {
-    const license = await getLicense(key);
-    if (!license) {
-      return res.status(404).json({ success: false, message: 'License not found' });
-    }
-    res.json({ success: true, license });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-app.post('/api/activate', async (req, res) => {
-  const { key, machineId } = req.body;
-  if (!key || !machineId) {
-    return res.status(400).json({ valid: false, message: 'Key and machineId are required' });
-  }
-
-  try {
-    const result = await activateLicense(key, machineId);
+    const result = await activateMachine(machineId, notes);
     res.json(result);
   } catch (error) {
-    res.status(500).json({ valid: false, message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
 app.post('/api/check', async (req, res) => {
-  const { key, machineId } = req.body;
-  if (!key) {
-    return res.status(400).json({ valid: false, message: 'Key is required' });
+  const { machineId } = req.body;
+  if (!machineId) {
+    return res.status(400).json({ valid: false, message: 'Machine ID is required' });
   }
 
   try {
-    const result = await getLicense(key);
-    if (!result) {
-      return res.json({ valid: false, message: 'License not found' });
-    }
-
-    const isValid = result.active && !result.revoked;
-    const machineMatch = !result.machineId || result.machineId === machineId;
-
-    res.json({
-      valid: isValid && machineMatch,
-      message: isValid && machineMatch ? 'License valid' : 'License invalid or expired'
-    });
+    const activated = await isMachineActivated(machineId);
+    res.json({ valid: activated, message: activated ? 'Machine activated' : 'Machine not activated' });
   } catch (error) {
     res.status(500).json({ valid: false, message: error.message });
-  }
-});
-
-app.post('/api/revoke', requireAdminToken, async (req, res) => {
-  const { key } = req.body;
-  if (!key) {
-    return res.status(400).json({ success: false, message: 'Key is required' });
-  }
-
-  try {
-    const result = await revokeLicense(key);
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
   }
 });
 
 app.get('/api/list', requireAdminToken, async (req, res) => {
   try {
-    const licenses = await listLicenses();
-    res.json({ success: true, licenses });
+    const machines = await listActivatedMachines();
+    res.json({ success: true, machines });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/deactivate', requireAdminToken, async (req, res) => {
+  const { machineId } = req.body;
+  if (!machineId) {
+    return res.status(400).json({ success: false, message: 'Machine ID is required' });
+  }
+
+  try {
+    const result = await deactivateMachine(machineId);
+    res.json(result);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -199,32 +199,20 @@ function setTemplate(index) {
   // This function is no longer used - content selection is now via checkboxes
 }
 
-// License activation
-async function activateLicense() {
-  const key = document.getElementById('license-key').value.trim();
-  const errorEl = document.getElementById('license-error');
-
-  try {
-    const result = await window.electronAPI.licenseValidate(key);
-    if (result.valid) {
-      isActivated = true;
-      document.getElementById('license-modal').classList.add('hidden');
-      loadData();
-      alert('License activated successfully!');
-    } else {
-      errorEl.textContent = result.message;
-    }
-  } catch (error) {
-    errorEl.textContent = 'Activation failed: ' + error.message;
-  }
-}
-
+// License status display (no activation needed - done by admin)
 async function renderMachineId() {
   const machineEl = document.getElementById('license-machine-id');
   if (!machineEl) return;
   try {
     const machineId = await window.electronAPI.licenseGetMachineId();
-    machineEl.textContent = `Machine ID: ${machineId}`;
+    const status = isActivated ? '✅ Đã kích hoạt' : '❌ Chưa kích hoạt';
+    machineEl.innerHTML = `
+      <div>Machine ID: <code>${machineId}</code></div>
+      <div>Trạng thái: ${status}</div>
+      <div style="font-size: 12px; color: #666; margin-top: 10px;">
+        Gửi Machine ID này cho admin để được kích hoạt license.
+      </div>
+    `;
   } catch (error) {
     machineEl.textContent = 'Machine ID unavailable';
   }

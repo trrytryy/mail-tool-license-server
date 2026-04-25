@@ -32,20 +32,20 @@ async function writeLocalLicense(key) {
   });
 }
 
-async function remoteValidate(key) {
+async function remoteValidate() {
   const url = config.licenseServerUrl;
   const machineId = getMachineId();
 
   try {
-    const response = await fetch(`${url}/api/activate`, {
+    const response = await fetch(`${url}/api/check`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key, machineId })
+      body: JSON.stringify({ machineId })
     });
 
     const result = await response.json();
     if (result.valid) {
-      await writeLocalLicense(key);
+      await writeLocalLicense('activated');
     }
     return result;
   } catch (error) {
@@ -54,46 +54,13 @@ async function remoteValidate(key) {
 }
 
 class LicenseManager {
-  // Validate license key
-  async validate(key) {
-    if (!validateFormat(key)) {
-      return { valid: false, message: 'Invalid license key format. Use XXXX-XXXX-XXXX' };
-    }
-
-    if (config.useRemoteLicense) {
-      return remoteValidate(key);
-    }
-
-    const [part1, part2, signature] = key.split('-');
-    const payload = `${part1}${part2}`;
-    const expectedSignature = generateHash(payload).toUpperCase().substring(8, 12);
-
-    if (expectedSignature === signature.toUpperCase()) {
-      await writeLocalLicense(key);
-      return { valid: true, message: 'License activated successfully' };
-    }
-
-    return { valid: false, message: 'Invalid license key' };
-  }
-
-  getMachineId() {
-    return getMachineId();
-  }
-
-  // Check if license is activated
+  // Check if machine is activated
   async isActivated() {
     try {
       const license = await storage.read('license');
       if (license && license.activated === true) {
         if (config.useRemoteLicense && config.verifyOnStartup) {
-          const machineId = getMachineId();
-          const response = await fetch(`${config.licenseServerUrl}/api/check`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key: license.key, machineId })
-          });
-          const result = await response.json();
-          return result.valid === true;
+          return (await remoteValidate()).valid;
         }
         return true;
       }
@@ -103,7 +70,11 @@ class LicenseManager {
     }
   }
 
-  // Generate a valid license key for testing (development only)
+  getMachineId() {
+    return getMachineId();
+  }
+
+  // For development/testing - generate a valid key (not used in production)
   generateValidKey() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let part1 = '';
@@ -118,6 +89,7 @@ class LicenseManager {
     const hash = generateHash(payload).toUpperCase();
     const signature = hash.substring(8, 12);
     return `${part1}-${part2}-${signature}`;
+  }
   }
 }
 
