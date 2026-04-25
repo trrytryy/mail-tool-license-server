@@ -12,3 +12,8 @@ license-data.json
 # OS files
 .DS_Store
 Thumbs.db
+
+# Debug helper files
+.git_status.txt
+.git_log.txt
+.git_config.txt
