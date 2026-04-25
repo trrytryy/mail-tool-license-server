@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const os = require('os');
 const path = require('path');
+const fetch = require('node-fetch');
 const storage = require('./storage');
 
 const config = require(path.join(__dirname, 'license-config.json'));
@@ -11,21 +12,8 @@ function getMachineId() {
   return crypto.createHash('sha256').update(data).digest('hex');
 }
 
-function validateFormat(key) {
-  const pattern = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
-  return pattern.test(key);
-}
-
-function generateHash(key) {
-  return crypto.createHash('sha256')
-    .update(key + SECRET)
-    .digest('hex')
-    .substring(0, 16);
-}
-
-async function writeLocalLicense(key) {
+async function writeLocalLicense() {
   return storage.write('license', {
-    key,
     activated: true,
     activatedAt: new Date().toISOString(),
     machineId: getMachineId()
@@ -45,7 +33,7 @@ async function remoteValidate() {
 
     const result = await response.json();
     if (result.valid) {
-      await writeLocalLicense('activated');
+      await writeLocalLicense();
     }
     return result;
   } catch (error) {
@@ -54,7 +42,15 @@ async function remoteValidate() {
 }
 
 class LicenseManager {
-  // Check if machine is activated
+  async validate(key) {
+    if (!config.useRemoteLicense) {
+      return { valid: true, message: 'License validation disabled' };
+    }
+
+    // Only remote activation by machine ID is supported now.
+    return { valid: false, message: 'Please activate via Machine ID with admin bot.' };
+  }
+
   async isActivated() {
     try {
       const license = await storage.read('license');
@@ -74,7 +70,6 @@ class LicenseManager {
     return getMachineId();
   }
 
-  // For development/testing - generate a valid key (not used in production)
   generateValidKey() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let part1 = '';
@@ -86,10 +81,9 @@ class LicenseManager {
     }
 
     const payload = `${part1}${part2}`;
-    const hash = generateHash(payload).toUpperCase();
+    const hash = crypto.createHash('sha256').update(payload + SECRET).digest('hex').toUpperCase();
     const signature = hash.substring(8, 12);
     return `${part1}-${part2}-${signature}`;
-  }
   }
 }
 
