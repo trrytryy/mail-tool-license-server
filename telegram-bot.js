@@ -11,6 +11,7 @@ if (!TOKEN || !ADMIN_CHAT_ID) {
 }
 
 const bot = new TelegramBot(TOKEN, { polling: true });
+const callbackMappings = new Map();
 
 function isAdmin(chatId) {
   return String(chatId) === String(ADMIN_CHAT_ID);
@@ -100,7 +101,15 @@ async function sendActivatedList(chatId) {
 
     const lines = machines.map((machine, index) => `• ${index + 1}. ${machine.machineId} | ${new Date(machine.activatedAt).toLocaleString()}`);
     const text = `Máy đã kích hoạt (${machines.length}):\n${lines.join('\n')}`;
-    const keyboard = machines.slice(-10).map(machine => [{ text: `Hủy ${machine.machineId.slice(0, 10)}...`, callback_data: `deactivate:${machine.machineId}` }]);
+
+    const mapping = {};
+    const keyboard = machines.slice(-10).map((machine, index) => {
+      const callbackKey = `deactivate:${index}`;
+      mapping[callbackKey] = machine.machineId;
+      return [{ text: `Hủy ${machine.machineId.slice(0, 10)}...`, callback_data: callbackKey }];
+    });
+
+    callbackMappings.set(chatId, mapping);
 
     await bot.sendMessage(chatId, text, {
       reply_markup: {
@@ -205,7 +214,12 @@ bot.on('callback_query', async (callbackQuery) => {
   }
 
   if (data && data.startsWith('deactivate:')) {
-    const machineId = data.replace('deactivate:', '');
+    const mapping = callbackMappings.get(chatId) || {};
+    const machineId = mapping[data];
+    if (!machineId) {
+      return bot.answerCallbackQuery(callbackQuery.id, { text: 'Callback dữ liệu không hợp lệ hoặc đã hết hạn.' });
+    }
+
     await bot.answerCallbackQuery(callbackQuery.id, { text: `Đang hủy kích hoạt ${machineId}...` });
     await deactivateMachine(machineId, chatId);
   } else {

@@ -6,7 +6,7 @@ dist/
 win-unpacked/
 
 # License data and env
-license-data.json
+# license-data.json
 .env
 
 # OS files

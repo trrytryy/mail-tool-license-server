@@ -40,6 +40,10 @@ app.post('/api/activate', requireAdminToken, async (req, res) => {
   }
 });
 
+app.get('/api/check', (req, res) => {
+  res.json({ message: 'Please use POST /api/check with JSON body { machineId: "..." }' });
+});
+
 app.post('/api/check', async (req, res) => {
   const { machineId } = req.body;
   if (!machineId) {
@@ -77,7 +81,7 @@ app.post('/api/deactivate', requireAdminToken, async (req, res) => {
   }
 });
 
-// For Vercel serverless
+// For serverless deployment
 module.exports = app;
 
 // For local development

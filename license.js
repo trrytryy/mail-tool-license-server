@@ -12,12 +12,29 @@ function getMachineId() {
   return crypto.createHash('sha256').update(data).digest('hex');
 }
 
-async function writeLocalLicense() {
+async function writeLocalLicense(options = {}) {
   return storage.write('license', {
     activated: true,
     activatedAt: new Date().toISOString(),
-    machineId: getMachineId()
+    machineId: getMachineId(),
+    activatedByKey: options.activatedByKey === true
   });
+}
+
+function normalizeLicenseKey(key) {
+  return String(key || '').trim().toUpperCase();
+}
+
+function isValidLicenseKey(key) {
+  const match = key.match(/^([A-Z0-9]{4})-([A-Z0-9]{4})-([A-Z0-9]{4})$/);
+  if (!match) {
+    return false;
+  }
+
+  const payload = `${match[1]}${match[2]}`;
+  const signature = match[3];
+  const expectedSignature = crypto.createHash('sha256').update(payload + SECRET).digest('hex').toUpperCase().substring(8, 12);
+  return signature === expectedSignature;
 }
 
 async function remoteValidate() {
@@ -43,32 +60,42 @@ async function remoteValidate() {
 
 class LicenseManager {
   async validate(key) {
-    if (!config.useRemoteLicense) {
-      return { valid: true, message: 'License validation disabled' };
+    const normalizedKey = normalizeLicenseKey(key);
+    if (!normalizedKey) {
+      return { valid: false, message: 'Vui lòng nhập License Key.' };
     }
 
-    // Only remote activation by machine ID is supported now.
-    return { valid: false, message: 'Please activate via Machine ID with admin bot.' };
+    if (!isValidLicenseKey(normalizedKey)) {
+      return { valid: false, message: 'License Key không hợp lệ.' };
+    }
+
+    await writeLocalLicense({ activatedByKey: true });
+    return { valid: true, message: 'Kích hoạt bằng License Key thành công.' };
   }
 
   async isActivated() {
     try {
       const license = await storage.read('license');
+      if (!license || license.activated !== true) {
+        return false;
+      }
+
+      if (license.activatedByKey) {
+        return true;
+      }
+
       if (config.useRemoteLicense) {
         const remoteResult = await remoteValidate();
         if (remoteResult.valid) {
           return true;
         }
-        if (license && license.activated === true && !config.verifyOnStartup) {
+        if (!config.verifyOnStartup) {
           return true;
         }
         return false;
       }
 
-      if (license && license.activated === true) {
-        return true;
-      }
-      return false;
+      return true;
     } catch {
       return false;
     }

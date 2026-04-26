@@ -213,9 +213,8 @@ The Electron client now supports remote activation by calling the license server
 - Server xác minh key và gán key cho máy nếu cần.
 - App hiện đúng `Machine ID` trên màn hình activation để bạn có thể yêu cầu khách gửi lại khi bind key.
 - `verifyOnStartup` được bật, nên app sẽ kiểm tra license với server mỗi lần khởi động để đảm bảo key chưa bị thu hồi.
-- Current remote license server URL: `https://mail-tool-license-server-tau.vercel.app`
+- Remote license server URL được cấu hình trong `license-config.json`.
 - Sau khi thành công, app vẫn lưu trạng thái activation cục bộ, nhưng tiếp tục kiểm tra lại với server nếu cấu hình yêu cầu.
-- Current remote license server URL: `https://mail-tool-license-server-tau.vercel.app`
 
 ## Performance
 

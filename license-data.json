@@ -1,9 +1,3 @@
 {
-  "activatedMachines": [
-    {
-      "machineId": "7bb835dfae36d5767ac3e941a2713dbf0cb8f06769da926c003807b123sf9cf1",
-      "activatedAt": "2026-04-26T09:00:00.000Z",
-      "notes": "Activated by admin"
-    }
-  ]
+  "activatedMachines": []
 }

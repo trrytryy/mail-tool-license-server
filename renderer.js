@@ -1,5 +1,6 @@
 // Renderer process - UI logic
 let smtpAccounts = [];
+let selectedSmtpEmail = null;
 let isActivated = false;
 let isSending = false;
 let isPaused = false;
@@ -253,6 +254,68 @@ async function renderMachineId() {
   }
 }
 
+async function activateLicenseKey() {
+  const input = document.getElementById('license-key-input');
+  const errorEl = document.getElementById('license-error');
+  if (!input || !errorEl) return;
+
+  const key = input.value.trim();
+  errorEl.textContent = '';
+  if (!key) {
+    errorEl.textContent = 'Vui lòng nhập License Key.';
+    return;
+  }
+
+  try {
+    const result = await window.electronAPI.licenseValidate(key);
+    if (result.valid) {
+      isActivated = true;
+      document.getElementById('license-modal').classList.add('hidden');
+      loadData();
+      refreshAllContentSummaries();
+      setDefaultSmtpProvider();
+      return;
+    }
+    errorEl.textContent = result.message || 'Kích hoạt không thành công.';
+  } catch (error) {
+    errorEl.textContent = `Lỗi kích hoạt: ${error.message}`;
+  }
+}
+
+async function refreshLicenseStatus() {
+  const errorEl = document.getElementById('license-error');
+  if (errorEl) {
+    errorEl.textContent = 'Đang kiểm tra lại...';
+  }
+
+  try {
+    isActivated = await window.electronAPI.licenseIsActivated();
+    await renderMachineId();
+
+    if (isActivated) {
+      if (errorEl) {
+        errorEl.style.color = '#28a745';
+        errorEl.textContent = 'License đã được kích hoạt. Bạn có thể tiếp tục.';
+      }
+      document.getElementById('license-modal').classList.add('hidden');
+      loadData();
+      refreshAllContentSummaries();
+      setDefaultSmtpProvider();
+      return;
+    }
+
+    if (errorEl) {
+      errorEl.style.color = '#d9534f';
+      errorEl.textContent = 'Chưa kích hoạt. Vui lòng chờ admin kích hoạt rồi thử lại.';
+    }
+  } catch (error) {
+    if (errorEl) {
+      errorEl.style.color = '#d9534f';
+      errorEl.textContent = `Lỗi kiểm tra: ${error.message}`;
+    }
+  }
+}
+
 // Navigation
 function setupNavigation() {
   const navLinks = document.querySelectorAll('.nav-link');
@@ -312,6 +375,7 @@ async function loadData() {
     const smtpData = await window.electronAPI.storageRead('smtp');
     if (smtpData && smtpData.accounts) {
       smtpAccounts = smtpData.accounts;
+      selectedSmtpEmail = smtpData.selectedEmail || (smtpAccounts[0] && smtpAccounts[0].email) || null;
       renderSmtpList();
     }
 
@@ -365,9 +429,12 @@ async function addSmtpAccount() {
 
   const account = { email, password, host, port };
   smtpAccounts.push(account);
+  if (!selectedSmtpEmail) {
+    selectedSmtpEmail = email;
+  }
 
   try {
-    await window.electronAPI.storageWrite('smtp', { accounts: smtpAccounts });
+    await window.electronAPI.storageWrite('smtp', { accounts: smtpAccounts, selectedEmail: selectedSmtpEmail });
     renderSmtpList();
     clearSmtpForm();
     alert('SMTP account added successfully');
@@ -393,12 +460,20 @@ function renderSmtpList() {
   }
 
   smtpAccounts.forEach((account, index) => {
+    const isSelected = account.email === selectedSmtpEmail;
     const itemEl = document.createElement('div');
     itemEl.className = 'smtp-item';
+    itemEl.classList.toggle('selected-smtp', isSelected);
     itemEl.innerHTML = `
-      <div class="info">
-        <strong>${account.email}</strong><br>
-        ${account.host}:${account.port}
+      <div style="display:flex; align-items:center; gap:10px;">
+        <label style="cursor:pointer; display:flex; align-items:center; gap:8px;">
+          <input type="radio" name="selected-smtp" ${isSelected ? 'checked' : ''} onclick="selectSmtpAccount(${index})">
+          <span style="font-size:13px; color:#fff;">Use this account</span>
+        </label>
+        <div class="info">
+          <strong>${account.email}</strong><br>
+          ${account.host}:${account.port}
+        </div>
       </div>
       <div class="actions">
         <button class="btn" onclick="testSmtpAccount(${index})">Test</button>
@@ -441,11 +516,22 @@ async function testSmtpAccount(index) {
   }
 }
 
+function selectSmtpAccount(index) {
+  const account = smtpAccounts[index];
+  if (!account) return;
+  selectedSmtpEmail = account.email;
+  window.electronAPI.storageWrite('smtp', { accounts: smtpAccounts, selectedEmail: selectedSmtpEmail });
+  renderSmtpList();
+}
+
 async function removeSmtpAccount(index) {
   if (confirm('Are you sure you want to remove this SMTP account?')) {
-    smtpAccounts.splice(index, 1);
+    const removedAccount = smtpAccounts.splice(index, 1)[0];
+    if (removedAccount && removedAccount.email === selectedSmtpEmail) {
+      selectedSmtpEmail = smtpAccounts[0] ? smtpAccounts[0].email : null;
+    }
     try {
-      await window.electronAPI.storageWrite('smtp', { accounts: smtpAccounts });
+      await window.electronAPI.storageWrite('smtp', { accounts: smtpAccounts, selectedEmail: selectedSmtpEmail });
       renderSmtpList();
     } catch (error) {
       alert('Failed to remove SMTP account: ' + error.message);
@@ -518,6 +604,12 @@ async function startSending() {
     return;
   }
 
+  const activeSmtpAccounts = smtpAccounts.filter(account => account.email === selectedSmtpEmail);
+  if (activeSmtpAccounts.length === 0) {
+    alert('Please select one SMTP account to use for sending');
+    return;
+  }
+
   // Create email queue based on content selection
   const emailQueue = [];
   selectedRecipients.forEach(recipient => {
@@ -549,7 +641,7 @@ async function startSending() {
   const attachments = attachmentFile ? [{ path: selectedAttachmentPath, filename: attachmentFile.name }] : [];
 
   const config = {
-    smtpAccounts,
+    smtpAccounts: activeSmtpAccounts,
     emailQueue,
     delay,
     maxEmails: maxEmails || null,

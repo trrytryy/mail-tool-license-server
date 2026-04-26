@@ -3,6 +3,12 @@ const fsSync = require('fs');
 const os = require('os');
 const path = require('path');
 const fetch = require('node-fetch');
+const config = require('./license-config.json');
+
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || config.githubToken || null;
+const GITHUB_REPO = process.env.GITHUB_REPO || config.githubRepo || 'trrytryy/mail-tool-license-server';
+const GITHUB_FILE = process.env.GITHUB_FILE || config.githubFile || 'license-data.json';
+const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`;
 
 function getDefaultStorePath() {
   const envPath = process.env.LICENSE_DATA_PATH;
@@ -10,20 +16,18 @@ function getDefaultStorePath() {
     return envPath;
   }
 
-  const cwdStore = path.join(process.cwd(), 'license-data.json');
+  const defaultPath = path.join(__dirname, 'license-data.json');
   try {
-    fsSync.accessSync(process.cwd(), fsSync.constants.W_OK);
-    return cwdStore;
+    fsSync.accessSync(path.dirname(defaultPath), fsSync.constants.W_OK);
+    return defaultPath;
   } catch {
+    // In serverless environments like Netlify, the function bundle may be read-only.
+    // Fallback to /tmp which is writable during runtime.
     return path.join(os.tmpdir(), 'license-data.json');
   }
 }
 
 const STORE_FILE = getDefaultStorePath();
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN || null;
-const GITHUB_REPO = process.env.GITHUB_REPO || 'trrytryy/mail-tool-license-server';
-const GITHUB_FILE = process.env.GITHUB_FILE || 'license-data.json';
-const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`;
 
 function useGitHubStore() {
   return Boolean(GITHUB_TOKEN);
@@ -118,7 +122,16 @@ async function writeStore(data) {
   await fs.writeFile(STORE_FILE, JSON.stringify(data, null, 2), 'utf8');
 }
 
+function normalizeMachineId(machineId) {
+  return String(machineId || '').trim();
+}
+
 async function activateMachine(machineId, notes = '') {
+  machineId = normalizeMachineId(machineId);
+  if (!machineId) {
+    return { success: false, message: 'Machine ID is required' };
+  }
+
   const store = await readStore();
   const existing = store.activatedMachines.find(m => m.machineId === machineId);
   if (existing) {
@@ -136,6 +149,11 @@ async function activateMachine(machineId, notes = '') {
 }
 
 async function isMachineActivated(machineId) {
+  machineId = normalizeMachineId(machineId);
+  if (!machineId) {
+    return false;
+  }
+
   const store = await readStore();
   return store.activatedMachines.some(m => m.machineId === machineId);
 }
@@ -146,6 +164,11 @@ async function listActivatedMachines() {
 }
 
 async function deactivateMachine(machineId) {
+  machineId = normalizeMachineId(machineId);
+  if (!machineId) {
+    return { success: false, message: 'Machine ID is required' };
+  }
+
   const store = await readStore();
   const index = store.activatedMachines.findIndex(m => m.machineId === machineId);
   if (index === -1) {

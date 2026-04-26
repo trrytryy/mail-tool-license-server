@@ -1,6 +1,6 @@
 {
   "telegramBotToken": "YOUR_TELEGRAM_BOT_TOKEN",
   "adminChatId": "YOUR_TELEGRAM_CHAT_ID",
-  "licenseServerUrl": "https://mail-tool-license-server-tau.vercel.app",
+  "licenseServerUrl": "https://steady-torrone-e91184.netlify.app",
   "adminToken": "YOUR_ADMIN_TOKEN"
 }
