@@ -285,14 +285,16 @@ async function activateLicenseKey() {
 async function refreshLicenseStatus() {
   const errorEl = document.getElementById('license-error');
   if (errorEl) {
+    errorEl.style.color = '#000';
     errorEl.textContent = 'Đang kiểm tra lại...';
   }
 
   try {
-    isActivated = await window.electronAPI.licenseIsActivated();
+    const result = await window.electronAPI.licenseCheck();
     await renderMachineId();
 
-    if (isActivated) {
+    if (result.valid) {
+      isActivated = true;
       if (errorEl) {
         errorEl.style.color = '#28a745';
         errorEl.textContent = 'License đã được kích hoạt. Bạn có thể tiếp tục.';
@@ -304,9 +306,10 @@ async function refreshLicenseStatus() {
       return;
     }
 
+    isActivated = false;
     if (errorEl) {
       errorEl.style.color = '#d9534f';
-      errorEl.textContent = 'Chưa kích hoạt. Vui lòng chờ admin kích hoạt rồi thử lại.';
+      errorEl.textContent = result.message || 'Chưa kích hoạt. Vui lòng chờ admin kích hoạt rồi thử lại.';
     }
   } catch (error) {
     if (errorEl) {

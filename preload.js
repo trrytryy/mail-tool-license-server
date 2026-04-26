@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // License
   licenseValidate: (key) => ipcRenderer.invoke('license:validate', key),
   licenseIsActivated: () => ipcRenderer.invoke('license:isActivated'),
+  licenseCheck: () => ipcRenderer.invoke('license:check'),
   licenseGetMachineId: () => ipcRenderer.invoke('license:getMachineId'),
 
   // Mailer

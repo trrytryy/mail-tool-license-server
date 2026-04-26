@@ -80,6 +80,10 @@ ipcMain.handle('license:isActivated', async () => {
   return await license.isActivated();
 });
 
+ipcMain.handle('license:check', async () => {
+  return await license.checkRemote();
+});
+
 ipcMain.handle('license:getMachineId', async () => {
   return license.getMachineId();
 });

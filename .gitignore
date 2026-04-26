@@ -3,6 +3,9 @@ node_modules/
 
 # Build output
 dist/
+dist2/
+dist3/
+dist4/
 win-unpacked/
 
 # License data and env

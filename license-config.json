@@ -1,8 +1,5 @@
 {
   "useRemoteLicense": true,
   "licenseServerUrl": "https://steady-torrone-e91184.netlify.app",
-  "verifyOnStartup": true,
-  "githubRepo": "trrytryy/mail-tool-license-server",
-  "githubFile": "license-data.json",
-  "githubToken": ""
+  "verifyOnStartup": true
 }

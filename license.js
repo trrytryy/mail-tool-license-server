@@ -73,14 +73,15 @@ class LicenseManager {
     return { valid: true, message: 'Kích hoạt bằng License Key thành công.' };
   }
 
+  async checkRemote() {
+    return await remoteValidate();
+  }
+
   async isActivated() {
     try {
       const license = await storage.read('license');
-      if (!license || license.activated !== true) {
-        return false;
-      }
 
-      if (license.activatedByKey) {
+      if (license && license.activatedByKey) {
         return true;
       }
 
@@ -89,13 +90,15 @@ class LicenseManager {
         if (remoteResult.valid) {
           return true;
         }
-        if (!config.verifyOnStartup) {
+
+        if (license && license.activated === true && !config.verifyOnStartup) {
           return true;
         }
+
         return false;
       }
 
-      return true;
+      return Boolean(license && license.activated === true);
     } catch {
       return false;
     }
