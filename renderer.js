@@ -7,6 +7,8 @@ let totalRecipients = 0;
 let sentCount = 0;
 let campaigns = [];
 let recipientList = [];
+let recipientInvalidCount = 0;
+let recipientDuplicatesRemoved = 0;
 let selectedAttachmentPath = null;
 let activeContentIndex = 0;
 let currentModalContentIndex = 0;
@@ -157,6 +159,7 @@ function updateRecipientTable() {
   recipientList.forEach((recipient, index) => {
     const row = document.createElement('tr');
     row.innerHTML = `
+      <td><input type="checkbox" ${recipient.selected !== false ? 'checked' : ''} onchange="toggleRecipientSelection(${index}, this)"></td>
       <td>${index + 1}</td>
       <td>${recipient.email}</td>
       <td>${recipient.name}</td>
@@ -164,29 +167,61 @@ function updateRecipientTable() {
     `;
     tbody.appendChild(row);
   });
+
+  document.getElementById('recipient-select-all').checked = recipientList.length > 0 && recipientList.every(r => r.selected !== false);
+}
+
+function toggleRecipientSelection(index, checkbox) {
+  if (!recipientList[index]) return;
+  recipientList[index].selected = checkbox.checked;
+  updateRecipientSummary(totalRecipients, recipientInvalidCount, recipientDuplicatesRemoved);
+}
+
+function selectAllRecipients() {
+  recipientList = recipientList.map(r => ({ ...r, selected: true }));
+  updateRecipientTable();
+  updateRecipientSummary(totalRecipients, recipientInvalidCount, recipientDuplicatesRemoved);
+}
+
+function deselectAllRecipients() {
+  recipientList = recipientList.map(r => ({ ...r, selected: false }));
+  updateRecipientTable();
+  updateRecipientSummary(totalRecipients, recipientInvalidCount, recipientDuplicatesRemoved);
+}
+
+function toggleSelectAll(source) {
+  const checked = source.checked;
+  recipientList = recipientList.map(r => ({ ...r, selected: checked }));
+  updateRecipientTable();
+  updateRecipientSummary(totalRecipients, recipientInvalidCount, recipientDuplicatesRemoved);
 }
 
 function loadRecipientsFromTextarea() {
   const csvText = document.getElementById('csv-recipients').value.trim();
   const { recipients, invalidCount, duplicatesRemoved } = parseRecipients(csvText);
-  recipientList = recipients;
+  recipientInvalidCount = invalidCount;
+  recipientDuplicatesRemoved = duplicatesRemoved;
+  recipientList = recipients.map(recipient => ({ ...recipient, selected: true }));
   totalRecipients = recipientList.length;
   updateRecipientTable();
-  updateRecipientSummary(totalRecipients, invalidCount, duplicatesRemoved);
+  updateRecipientSummary(totalRecipients, recipientInvalidCount, recipientDuplicatesRemoved);
 }
 
 function clearRecipientList() {
   recipientList = [];
+  recipientInvalidCount = 0;
+  recipientDuplicatesRemoved = 0;
   document.getElementById('csv-recipients').value = '';
   updateRecipientTable();
   totalRecipients = 0;
-  updateRecipientSummary(0, 0, 0);
+  updateRecipientSummary(0, recipientInvalidCount, recipientDuplicatesRemoved);
 }
 
 function updateRecipientSummary(validCount, invalidCount, duplicatesRemoved) {
+  const selectedCount = recipientList.filter(recipient => recipient.selected !== false).length;
   const summaryEl = document.getElementById('recipient-summary');
   if (!summaryEl) return;
-  summaryEl.textContent = `Valid: ${validCount}, Invalid: ${invalidCount}, Duplicates removed: ${duplicatesRemoved}`;
+  summaryEl.textContent = `Valid: ${validCount}, Selected: ${selectedCount}, Invalid: ${invalidCount}, Duplicates removed: ${duplicatesRemoved}`;
 }
 
 function handleAttachmentInput(event) {
@@ -477,9 +512,15 @@ async function startSending() {
     return;
   }
 
+  const selectedRecipients = recipientList.filter(recipient => recipient.selected !== false);
+  if (selectedRecipients.length === 0) {
+    alert('Please select at least one recipient to send');
+    return;
+  }
+
   // Create email queue based on content selection
   const emailQueue = [];
-  recipientList.forEach(recipient => {
+  selectedRecipients.forEach(recipient => {
     if (content1Selected) {
       emailQueue.push({
         recipient,
@@ -585,7 +626,7 @@ function parseRecipients(csvText) {
     }
 
     seenEmails.add(normalizedEmail);
-    recipients.push({ name, email });
+    recipients.push({ name, email, selected: true });
   }
 
   return { recipients, invalidCount, duplicatesRemoved };

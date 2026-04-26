@@ -160,13 +160,20 @@
             color: #cccccc;
         }
 
+        .recipient-table-wrapper {
+            width: 100%;
+            max-height: 360px;
+            overflow-y: auto;
+            border: 1px solid #3c3c3c;
+            border-radius: 8px;
+            margin-top: 15px;
+            background-color: #222;
+        }
+
         .recipient-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
-            background-color: #222;
-            border-radius: 5px;
-            overflow: hidden;
+            background-color: transparent;
         }
 
         .recipient-table th,
@@ -175,6 +182,14 @@
             padding: 12px;
             text-align: left;
             font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .recipient-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background-color: #2d2d2d;
         }
 
         .recipient-table th {
@@ -597,23 +612,28 @@
                             Valid: 0, Invalid: 0, Duplicates removed: 0
                         </div>
                     </div>
-                    <div class="form-group" style="display: flex; gap: 10px; align-items: end;">
+                    <div class="form-group" style="display: flex; gap: 10px; align-items: end; flex-wrap: wrap;">
                         <button class="btn" onclick="loadRecipientsFromTextarea()">Validate List</button>
                         <button class="btn danger" onclick="clearRecipientList()">Clear List</button>
+                        <button class="btn" onclick="selectAllRecipients()">Select All</button>
+                        <button class="btn" onclick="deselectAllRecipients()">Deselect All</button>
                     </div>
                 </div>
 
-                <table class="recipient-table" id="recipient-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Email</th>
-                            <th>Name</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+                <div class="recipient-table-wrapper">
+                    <table class="recipient-table" id="recipient-table">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" id="recipient-select-all" onclick="toggleSelectAll(this)"></th>
+                                <th>#</th>
+                                <th>Email</th>
+                                <th>Name</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- Sending Options -->
